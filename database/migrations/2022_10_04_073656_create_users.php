@@ -1,0 +1,49 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateUsers extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create(TABLE_USERS, function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('employee_id', 50)->nullable();
+            $table->string('username', 50);
+            $table->string('password');
+            $table->smallInteger('user_group_id')->default(3);
+            $table->tinyInteger('user_type_id')->default(1);
+            $table->string('trial_station_ids')->default(',');
+            $table->string('name');
+            $table->string('email', 100)->nullable();
+            $table->string('mobile_no')->nullable();
+            $table->integer('ordering')->default(9999);
+            $table->enum('status', [SYSTEM_STATUS_ACTIVE, SYSTEM_STATUS_INACTIVE, SYSTEM_STATUS_DELETE])->default(SYSTEM_STATUS_ACTIVE)->comment(SYSTEM_STATUS_ACTIVE.','. SYSTEM_STATUS_INACTIVE.','.SYSTEM_STATUS_DELETE);
+            $table->longText('infos')->nullable();
+            $table->timestamp('mobile_authentication_off_end')->nullable();
+            $table->smallInteger('max_logged_browser')->default(3);
+
+            $table->integer('created_by');
+            $table->integer('updated_by')->nullable();
+
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists(TABLE_USERS);
+    }
+}
