@@ -36,11 +36,6 @@ class UsersController extends RootController
             else{
                 $response['user_groups']= DB::table(TABLE_USER_GROUPS)->select('id','name')->where('id','!=',ID_USERGROUP_SUPERADMIN)->orderBy('id', 'ASC')->get()->toArray();
             }
-            $response['trial_stations']= DB::table(TABLE_TRIAL_STATIONS)
-                ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
-                ->get();
             $response['location_parts'] = DB::table(TABLE_LOCATION_PARTS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
@@ -94,7 +89,7 @@ class UsersController extends RootController
         if ($this->permissions->action_0 == 1){
             /** @noinspection DuplicatedCode */
             $query=DB::table(TABLE_USERS.' as users');
-            $query->select('users.id','users.employee_id','users.username','users.user_group_id','users.trial_station_ids','users.name','users.email','users.mobile_no',
+            $query->select('users.id','users.employee_id','users.username','users.user_group_id','users.name','users.email','users.mobile_no',
                 'users.part_id','users.area_id','users.territory_id',
                 'users.ordering','users.status','users.max_logged_browser','users.mobile_authentication_off_end','users.created_at');
             $query->join(TABLE_USER_GROUPS.' as user_groups', 'user_groups.id', '=', 'users.user_group_id');
@@ -139,7 +134,6 @@ class UsersController extends RootController
         $validation_rule['username'] = ['required', 'alpha_dash'];
         $validation_rule['password'] = ['required','min:4'];
         $validation_rule['user_group_id'] = ['required'];
-        $validation_rule['trial_station_ids'] = ['required'];
         $validation_rule['part_id'] = ['numeric'];
         $validation_rule['area_id'] = ['numeric'];
         $validation_rule['territory_id'] = ['numeric'];
@@ -166,12 +160,6 @@ class UsersController extends RootController
             $itemNew['territory_id']=0;
         }
 
-        if(isset($itemNew['trial_station_ids'])){
-            $itemNew['trial_station_ids']=','.implode(',',$itemNew['trial_station_ids']).',';
-        }
-        else{
-            return response()->json(['error' => 'VALIDATION_FAILED', 'messages' => 'Trail Station Required']);
-        }
         $itemOld =[];
 
         $this->validateInputKeys($itemNew,array_keys($validation_rule));
