@@ -36,11 +36,6 @@ class VarietiesController extends RootController
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-            $crop_features = DB::table(TABLE_CROP_FEATURES)
-                ->select('id', 'name','crop_id')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
-                ->get();
             $principals = DB::table(TABLE_PRINCIPALS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
@@ -56,7 +51,6 @@ class VarietiesController extends RootController
                 'hidden_columns'=>TaskHelper::getHiddenColumns($this->api_url,$this->user),
                 'crops'=>$crops,
                 'crop_types'=>$crop_types,
-                'crop_features'=>$crop_features,
                 'principals'=>$principals,
                 'competitors'=>$competitors,
 
@@ -139,7 +133,6 @@ class VarietiesController extends RootController
         $validation_rule = [];
         $validation_rule['name'] = ['required'];
         $validation_rule['crop_type_id'] = ['required','numeric'];
-        $validation_rule['crop_feature_ids'] = ['nullable'];
         $validation_rule['whose'] = [Rule::in(['ARM', 'Principal','Competitor'])];
         $validation_rule['principal_id']=['numeric','nullable'];
         $validation_rule['competitor_id']=['numeric','nullable'];
@@ -156,12 +149,6 @@ class VarietiesController extends RootController
             if(!($itemNew['competitor_id']>0)){
                 return response()->json(['error' => 'VALIDATION_FAILED', 'messages' => __('Competitor Required')]);
             }
-        }
-        if(isset($itemNew['crop_feature_ids'])){
-            $itemNew['crop_feature_ids']=','.implode(',',$itemNew['crop_feature_ids']).',';
-        }
-        else{
-            $itemNew['crop_feature_ids']=',';
         }
         $itemOld = [];
 
