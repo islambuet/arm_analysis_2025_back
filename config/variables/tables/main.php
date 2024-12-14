@@ -19,4 +19,4 @@ define('TABLE_LOCATION_DISTRICTS', $db_main.'.location_districts');
 define('TABLE_LOCATION_UPAZILAS', $db_main.'.location_upazilas');
 define('TABLE_LOCATION_UNIONS', $db_main.'.location_unions');
 
-define('TABLE_ANALYSIS_YEAR', $db_main.'.analysis_year');
+define('TABLE_ANALYSIS_YEARS', $db_main.'.analysis_years');

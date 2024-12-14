@@ -36,7 +36,7 @@ class AnalysisYearController extends RootController
     {
         if ($this->permissions->action_0 == 1) {
             $perPage = $request->input('perPage', 50);
-            $query=DB::table(TABLE_ANALYSIS_YEAR);
+            $query=DB::table(TABLE_ANALYSIS_YEARS);
             $query->orderBy('id', 'DESC');
             $query->where('status', '!=', SYSTEM_STATUS_DELETE);//
             if ($perPage == -1) {
@@ -55,7 +55,7 @@ class AnalysisYearController extends RootController
     public function getItem(Request $request, $itemId): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
-            $result = DB::table(TABLE_ANALYSIS_YEAR)->find($itemId);
+            $result = DB::table(TABLE_ANALYSIS_YEARS)->find($itemId);
             if (!$result) {
                 return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
             }
@@ -93,7 +93,7 @@ class AnalysisYearController extends RootController
 
         //edit change checking
         if ($itemId > 0) {
-            $result = DB::table(TABLE_ANALYSIS_YEAR)->select(array_keys($validation_rule))->find($itemId);
+            $result = DB::table(TABLE_ANALYSIS_YEARS)->select(array_keys($validation_rule))->find($itemId);
             if (!$result) {
                 return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
             }
@@ -129,20 +129,20 @@ class AnalysisYearController extends RootController
         try {
             $time = Carbon::now();
             $dataHistory = [];
-            $dataHistory['table_name'] = TABLE_ANALYSIS_YEAR;
+            $dataHistory['table_name'] = TABLE_ANALYSIS_YEARS;
             $dataHistory['controller'] = (new \ReflectionClass(__CLASS__))->getShortName();
             $dataHistory['method'] = __FUNCTION__;
             $newId = $itemId;
             if ($itemId > 0) {
                 $itemNew['updated_by'] = $this->user->id;
                 $itemNew['updated_at'] = $time;
-                DB::table(TABLE_ANALYSIS_YEAR)->where('id', $itemId)->update($itemNew);
+                DB::table(TABLE_ANALYSIS_YEARS)->where('id', $itemId)->update($itemNew);
                 $dataHistory['table_id'] = $itemId;
                 $dataHistory['action'] = DB_ACTION_EDIT;
             } else {
                 $itemNew['created_by'] = $this->user->id;
                 $itemNew['created_at'] = $time;
-                $newId = DB::table(TABLE_ANALYSIS_YEAR)->insertGetId($itemNew);
+                $newId = DB::table(TABLE_ANALYSIS_YEARS)->insertGetId($itemNew);
                 $dataHistory['table_id'] = $newId;
                 $dataHistory['action'] = DB_ACTION_ADD;
             }

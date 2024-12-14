@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 
-class CropSalesTeamController extends RootController
+class ResearchSalesTeamController extends RootController
 {
-    public $api_url = 'research/crop_sales_team';
+    public $api_url = 'research/research_sales_team';
     public $permissions;
 
     public function __construct()
@@ -26,76 +26,32 @@ class CropSalesTeamController extends RootController
     public function initialize(): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
-            $crops = DB::table(TABLE_CROPS)
+            $response = [];
+            $response['error'] ='';
+            $response['permissions']=$this->permissions;
+            $response['hidden_columns']=TaskHelper::getHiddenColumns($this->api_url,$this->user);
+            $response['analysis_years'] = DB::table(TABLE_ANALYSIS_YEARS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-            $crop_types2 = DB::table(TABLE_CROP_TYPES2)
+            $response['crops'] = DB::table(TABLE_CROPS)
+                ->select('id', 'name')
+                ->orderBy('ordering', 'ASC')
+                ->where('status', SYSTEM_STATUS_ACTIVE)
+                ->get();
+            $response['crop_types'] = DB::table(TABLE_CROP_TYPES)
                 ->select('id', 'name','crop_id')
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-
-            $location_parts = DB::table(TABLE_LOCATION_PARTS)
+            $response['location_districts'] = DB::table(TABLE_LOCATION_DISTRICTS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-            $location_areas = DB::table(TABLE_LOCATION_AREAS)
-                ->select('id', 'name','part_id')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
-                ->get();
-            $location_territories = DB::table(TABLE_LOCATION_TERRITORIES)
-                ->select('id', 'name','area_id')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
-                ->get();
-            $user_locations=['part_id'=>$this->user->part_id,'area_id'=>$this->user->area_id,'territory_id'=>$this->user->territory_id];
+            return response()->json($response);
 
-            return response()->json([
-                'error'=>'','permissions'=>$this->permissions,
-                'hidden_columns'=>TaskHelper::getHiddenColumns($this->api_url,$this->user),
-                'user_locations'=>$user_locations,
-                'crops'=>$crops,
-                'crop_types2'=>$crop_types2,
-                'location_parts'=>$location_parts,
-                'location_areas'=>$location_areas,
-                'location_territories'=>$location_territories,
-
-            ]);
-        } else {
-            return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
-        }
-    }
-
-    public function getItems(Request $request): JsonResponse
-    {
-        if ($this->permissions->action_0 == 1) {
-            $perPage = $request->input('perPage', 50);
-            //$query=DB::table(TABLE_CROP_TYPES2);
-            $query=DB::table(TABLE_RESEARCH_CROPS.' as rc');
-            $query->select('rc.*');
-            $query->join(TABLE_CROP_TYPES2.' as crop_types2', 'crop_types2.id', '=', 'rc.crop_type2_id');
-            $query->addSelect('crop_types2.name as crop_type2_name');
-            $query->join(TABLE_CROPS.' as crops', 'crops.id', '=', 'crop_types2.crop_id');
-            $query->addSelect('crops.name as crop_name');
-            $query->join(TABLE_LOCATION_TERRITORIES.' as territories', 'territories.id', '=', 'rc.territory_id');
-            $query->addSelect('territories.name as territory_name');
-            $query->join(TABLE_LOCATION_AREAS.' as areas', 'areas.id', '=', 'territories.area_id');
-            $query->addSelect('areas.name as area_name');
-            $query->join(TABLE_LOCATION_PARTS.' as parts', 'parts.id', '=', 'areas.part_id');
-            $query->addSelect('parts.name as part_name');
-
-            if ($perPage == -1) {
-                $perPage = $query->count();
-                if($perPage<1){
-                    $perPage=50;
-                }
-            }
-            $results = $query->paginate($perPage)->toArray();
-            return response()->json(['error'=>'','items'=>$results]);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
         }
