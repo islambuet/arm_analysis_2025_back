@@ -40,10 +40,15 @@ class ResearchSalesTeamController extends RootController
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-            $response['crop_types'] = DB::table(TABLE_CROP_TYPES)
-                ->select('id', 'name','crop_id')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
+            $response['crop_types'] = DB::table(TABLE_CROP_TYPES.' as crop_types')
+                ->select('crop_types.*')
+                ->join(TABLE_CROPS.' as crops', 'crops.id', '=', 'crop_types.crop_id')
+                ->addSelect('crops.name as crop_name')
+                ->orderBy('crops.ordering', 'ASC')
+                ->orderBy('crops.id', 'ASC')
+                ->orderBy('crop_types.ordering', 'ASC')
+                ->orderBy('crop_types.id', 'ASC')
+                ->where('crop_types.status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_districts'] = DB::table(TABLE_LOCATION_DISTRICTS)
                 ->select('id', 'name')
@@ -57,49 +62,34 @@ class ResearchSalesTeamController extends RootController
         }
     }
 
-    public function getItem(Request $request, $itemId): JsonResponse
+    public function getItem(Request $request,$analysisYearId, $itemId): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
-            $query=DB::table(TABLE_RESEARCH_CROPS.' as rc');
-            $query->select('rc.*');
-            $query->join(TABLE_CROP_TYPES2.' as crop_types2', 'crop_types2.id', '=', 'rc.crop_type2_id');
-            $query->addSelect('crop_types2.name as crop_type2_name');
-            $query->join(TABLE_CROPS.' as crops', 'crops.id', '=', 'crop_types2.crop_id');
-            $query->addSelect('crops.name as crop_name');
-            $query->join(TABLE_LOCATION_TERRITORIES.' as territories', 'territories.id', '=', 'rc.territory_id');
-            $query->addSelect('territories.name as territory_name');
-            $query->join(TABLE_LOCATION_AREAS.' as areas', 'areas.id', '=', 'territories.area_id');
-            $query->addSelect('areas.name as area_name');
-            $query->join(TABLE_LOCATION_PARTS.' as parts', 'parts.id', '=', 'areas.part_id');
-            $query->addSelect('parts.name as part_name');
-            $query->where('rc.id','=',$itemId);
-            $result = $query->first();
-            if (!$result) {
-                return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
-            }
-            return response()->json(['error'=>'','item'=>$result]);
-        } else {
-            return response()->json(['error' => 'ACCESS_DENIED', 'messages' => $this->permissions]);
-        }
-    }
-    public function getItemByTerritoryIdCropType2Id(Request $request, $crop_type2_id,$territory_id): JsonResponse
-    {
-        if ($this->permissions->action_0 == 1) {
-            $query=DB::table(TABLE_RESEARCH_CROPS.' as rc');
-            $query->select('rc.*');
-            $query->where('rc.crop_type2_id','=',$crop_type2_id);
-            $query->where('rc.territory_id','=',$territory_id);
-            $item = $query->first();
-
-            $competitor_varieties = DB::table(TABLE_VARIETIES2)
+            $response = [];
+            $response['error'] ='';
+            $response['location_upazilas'] = DB::table(TABLE_LOCATION_UPAZILAS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
-                ->where('crop_type_id', $crop_type2_id)
-                ->where('competitor_id', '>',0)
+                ->where('district_id', $itemId)
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-
-            return response()->json(['error'=>'','item'=>$item,'competitor_varieties'=>$competitor_varieties]);
+            $results=DB::table(TABLE_LOCATION_UNIONS.' as unions')
+                ->select('unions.*')
+                ->join(TABLE_LOCATION_UPAZILAS.' as upazilas', 'upazilas.id', '=', 'unions.upazila_id')
+                ->where('upazilas.district_id', $itemId)
+                ->orderBy('unions.ordering', 'ASC')
+                ->where('unions.status', SYSTEM_STATUS_ACTIVE)
+                ->get();
+            $response['location_unions']=[];
+            foreach ($results as $result){
+                $response['location_unions'][$result->upazila_id][]=$result;
+            }
+            $query=DB::table(TABLE_ANALYSIS_DATA.' as ad');
+            $query->select('ad.*');
+            $query->where('ad.analysis_year_id','=',$analysisYearId);
+            $query->where('ad.district_id','=',$itemId);
+            $response['data'] = $query->get()->toArray();
+            return response()->json($response);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => $this->permissions]);
         }
