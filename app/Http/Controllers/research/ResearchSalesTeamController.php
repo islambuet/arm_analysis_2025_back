@@ -96,102 +96,124 @@ class ResearchSalesTeamController extends RootController
     }
     public function saveItem(Request $request): JsonResponse
     {
-        $itemId = $request->input('id', 0);
+        $district_id = $request->input('district_id', 0);
+        $analysis_year_id = $request->input('analysis_year_id', 0);
         //permission checking start
-
+        //return response()->json(['error' => 'ACCESS_DENIED', 'messages' => $request->all()]);
         if (($this->permissions->action_1 != 1) || ($this->permissions->action_2 != 1)) {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have Edit access')]);
         }
         //permission checking passed
         $this->checkSaveToken();
         //Input validation start
-        $validation_rule = [];
-        $validation_rule['crop_type2_id'] = ['required','numeric'];
-        $validation_rule['territory_id'] = ['required','numeric'];
-        $validation_rule['market_size'] = ['nullable'];
-        $validation_rule['sowing_periods'] = ['nullable'];
-        $validation_rule['competitor_varieties_ids'] = ['nullable'];
-        $validation_rule['reason_sales'] = ['nullable'];
         $itemNew = $request->input('item');
-        if(isset($itemNew['sowing_periods'])){
-            $itemNew['sowing_periods']=','.implode(',',$itemNew['sowing_periods']).',';
-        }
-        if(isset($itemNew['competitor_varieties_ids'])){
-            $itemNew['competitor_varieties_ids']=','.implode(',',$itemNew['competitor_varieties_ids']).',';
-        }
+//        if(isset($itemNew['sowing_periods'])){
+//            $itemNew['sowing_periods']=','.implode(',',$itemNew['sowing_periods']).',';
+//        }
+//        if(isset($itemNew['competitor_varieties_ids'])){
+//            $itemNew['competitor_varieties_ids']=','.implode(',',$itemNew['competitor_varieties_ids']).',';
+//        }
 
-        $itemOld = [];
-        $this->validateInputKeys($itemNew, array_keys($validation_rule));
 
-        //edit change checking
-        {
-            $result = DB::table(TABLE_RESEARCH_CROPS)->select(array_keys($validation_rule))->addSelect('id')->where('territory_id',$itemNew['territory_id'])->where('crop_type2_id',$itemNew['crop_type2_id'])->first();
-            if ($result) {
-                $itemId=$result->id;
-                $itemOld = (array)$result;
-                foreach ($itemOld as $key => $oldValue) {
-                    if (array_key_exists($key, $itemNew)) {
-                        if ($oldValue == $itemNew[$key]) {
-                            //unchanged so remove from both
-                            unset($itemNew[$key]);
-                            unset($itemOld[$key]);
-                            unset($validation_rule[$key]);
-                        }
-                    } else {
-                        //will not happen if it comes form vue. removing rule and key for not change
-                        unset($validation_rule[$key]);
-                        unset($itemOld[$key]);
-                    }
-                }
-            }
 
-        }
+//        //edit change checking
+//        {
+//            $result = DB::table(TABLE_RESEARCH_CROPS)->select(array_keys($validation_rule))->addSelect('id')->where('territory_id',$itemNew['territory_id'])->where('crop_type2_id',$itemNew['crop_type2_id'])->first();
+//            if ($result) {
+//                $itemId=$result->id;
+//                $itemOld = (array)$result;
+//                foreach ($itemOld as $key => $oldValue) {
+//                    if (array_key_exists($key, $itemNew)) {
+//                        if ($oldValue == $itemNew[$key]) {
+//                            //unchanged so remove from both
+//                            unset($itemNew[$key]);
+//                            unset($itemOld[$key]);
+//                            unset($validation_rule[$key]);
+//                        }
+//                    } else {
+//                        //will not happen if it comes form vue. removing rule and key for not change
+//                        unset($validation_rule[$key]);
+//                        unset($itemOld[$key]);
+//                    }
+//                }
+//            }
+//
+//        }
         //if itemNew Empty
         if (!$itemNew) {
             return response()->json(['error' => 'VALIDATION_FAILED', 'messages' => 'Nothing was Changed']);
         }
-        $this->validateInputValues($itemNew, $validation_rule);
-        //TODO validate crop_id
-        //Input validation ends
-        DB::beginTransaction();
-        try {
-
-            $time = Carbon::now();
-            $dataHistory = [];
-            $dataHistory['table_name'] = TABLE_RESEARCH_CROPS;
-            $dataHistory['controller'] = (new \ReflectionClass(__CLASS__))->getShortName();
-            $dataHistory['method'] = __FUNCTION__;
-            $newId = $itemId;
-            if ($itemId > 0) {
-                $itemNew['sales_team_updated_by'] = $this->user->id;
-                $itemNew['sales_team_updated_at'] = $time;
-                DB::table(TABLE_RESEARCH_CROPS)->where('id', $itemId)->update($itemNew);
-                $dataHistory['table_id'] = $itemId;
-                $dataHistory['action'] = DB_ACTION_EDIT;
-            } else {
-                $itemNew['created_by'] = $this->user->id;
-                $itemNew['created_at'] = $time;
-                $newId = DB::table(TABLE_RESEARCH_CROPS)->insertGetId($itemNew);
-                $dataHistory['table_id'] = $newId;
-                $dataHistory['action'] = DB_ACTION_ADD;
+        $time = Carbon::now();
+        foreach ($itemNew as $type_id=>$info){
+            $data=[];
+            $data['analysis_year_id']=$analysis_year_id;
+            $data['district_id']=$district_id;
+            $data['type_id']=$type_id;
+            $data['market_size_total']=0;
+            $data['upazila_market_size']=',';
+            if(isset($info['upazila_market_size'])){
+                foreach ($info['upazila_market_size'] as $upzila_id=>$market_size){
+                    $data['upazila_market_size'].=($upzila_id.'_'.($market_size>0?$market_size:'0').',');
+                    $data['market_size_total']+=($market_size>0?(+$market_size):0);
+                }
             }
-            unset($itemNew['updated_by'],$itemNew['created_by'],$itemNew['created_at'],$itemNew['updated_at']);
+            $data['union_ids_running']=',';
+            if(isset($info['union_ids_running'])){
+                $data['union_ids_running']=','.implode(',',$info['union_ids_running']).',';
+            }
+            $data['sowing_periods']=',';
+            if(isset($info['sowing_periods'])){
+                $data['sowing_periods']=','.implode(',',$info['sowing_periods']).',';
+            }
+            //if exists compare with old value
+            // if different save in history and update
+            // save new
 
-            $dataHistory['data_old'] = json_encode($itemOld);
-            $dataHistory['data_new'] = json_encode($itemNew);
-            $dataHistory['created_at'] = $time;
-            $dataHistory['created_by'] = $this->user->id;
-
-            $this->dBSaveHistory($dataHistory, TABLE_SYSTEM_HISTORIES);
-            $this->updateSaveToken();
-            DB::commit();
-
-            return response()->json(['error' => '', 'messages' => 'Data (' . $newId . ')' . ($itemId > 0 ? 'Updated' : 'Created') . ')  Successfully']);
+            $data['created_by'] = $this->user->id;
+            $data['created_at'] = $time;
+            DB::table(TABLE_ANALYSIS_DATA)->insertGetId($data);
         }
-        catch (\Exception $ex) {
-            DB::rollback();
-            return response()->json(['error' => 'DB_SAVE_FAILED', 'messages' => __('Failed to save.')]);
-        }
+        return response()->json(['error' => '', 'messages' => 'Data Updated Successfully']);
+        //Input validation ends
+//        DB::beginTransaction();
+//        try {
+//
+//            $time = Carbon::now();
+//            $dataHistory = [];
+//            $dataHistory['table_name'] = TABLE_RESEARCH_CROPS;
+//            $dataHistory['controller'] = (new \ReflectionClass(__CLASS__))->getShortName();
+//            $dataHistory['method'] = __FUNCTION__;
+//            $newId = $itemId;
+//            if ($itemId > 0) {
+//                $itemNew['sales_team_updated_by'] = $this->user->id;
+//                $itemNew['sales_team_updated_at'] = $time;
+//                DB::table(TABLE_RESEARCH_CROPS)->where('id', $itemId)->update($itemNew);
+//                $dataHistory['table_id'] = $itemId;
+//                $dataHistory['action'] = DB_ACTION_EDIT;
+//            } else {
+//                $itemNew['created_by'] = $this->user->id;
+//                $itemNew['created_at'] = $time;
+//                $newId = DB::table(TABLE_RESEARCH_CROPS)->insertGetId($itemNew);
+//                $dataHistory['table_id'] = $newId;
+//                $dataHistory['action'] = DB_ACTION_ADD;
+//            }
+//            unset($itemNew['updated_by'],$itemNew['created_by'],$itemNew['created_at'],$itemNew['updated_at']);
+//
+//            $dataHistory['data_old'] = json_encode($itemOld);
+//            $dataHistory['data_new'] = json_encode($itemNew);
+//            $dataHistory['created_at'] = $time;
+//            $dataHistory['created_by'] = $this->user->id;
+//
+//            $this->dBSaveHistory($dataHistory, TABLE_SYSTEM_HISTORIES);
+//            $this->updateSaveToken();
+//            DB::commit();
+//
+//            return response()->json(['error' => '', 'messages' => 'Data (' . $newId . ')' . ($itemId > 0 ? 'Updated' : 'Created') . ')  Successfully']);
+//        }
+//        catch (\Exception $ex) {
+//            DB::rollback();
+//            return response()->json(['error' => 'DB_SAVE_FAILED', 'messages' => __('Failed to save.')]);
+//        }
     }
 }
 
