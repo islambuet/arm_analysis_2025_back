@@ -88,6 +88,17 @@ class ResearchSalesTeamController extends RootController
             foreach ($results as $result){
                 $response['location_unions'][$result->upazila_id][]=$result;
             }
+            $results=DB::table(TABLE_VARIETIES.' as varieties')
+                ->select('varieties.*')
+                ->join(TABLE_COMPETITORS.' as competitors', 'competitors.id', '=', 'varieties.competitor_id')
+                ->addSelect('competitors.name as competitor_name')
+                ->where('varieties.whose','=','Competitor')
+                ->get();
+            $response['varieties_competitor']=[];
+            foreach ($results as $result){
+                $response['varieties_competitor'][$result->crop_type_id][$result->id]=$result;
+            }
+
             $results=DB::table(TABLE_ANALYSIS_DATA.' as ad')
                 ->select('ad.*')
                 ->where('ad.analysis_year_id','=',$analysisYearId)
@@ -105,6 +116,30 @@ class ResearchSalesTeamController extends RootController
                     }
                 }
                 $result->upazila_market_size=$upazila_market_size;
+
+                $competitor_market_size=[];
+                if(strlen($result->competitor_market_size)>1){
+                    $temp=explode(",",$result->competitor_market_size);
+                    foreach ($temp as $t){
+                        if(str_contains($t,'_')){
+                            $competitor_market_size[substr($t,0,strpos($t,"_"))]=substr($t,strpos($t,"_")+1);
+                        }
+                    }
+                }
+                $result->competitor_market_size=$competitor_market_size;
+
+                $competitor_sales_reason=[];
+                if(strlen($result->competitor_sales_reason)>3){
+                    $temp=explode(",,,",$result->competitor_sales_reason);
+                    foreach ($temp as $t){
+                        if(str_contains($t,'_')){
+                            $competitor_sales_reason[substr($t,0,strpos($t,"_"))]=substr($t,strpos($t,"_")+1);
+                        }
+                    }
+                }
+                $result->competitor_sales_reason=$competitor_sales_reason;
+
+
                 $response['data'][$result->type_id]=$result;
             }
             return response()->json($response);
@@ -142,9 +177,10 @@ class ResearchSalesTeamController extends RootController
         foreach ($itemsNew as $type_id=>$info){
             $row=[];
             $row['analysis_year_id']=$analysis_year_id;
-            $row['district_id']=$district_id;
             $row['type_id']=$type_id;
+            $row['district_id']=$district_id;
             $row['market_size_total']=0;
+            $row['market_size_competitor']=0;
             $row['upazila_market_size']=',';
             if(isset($info['upazila_market_size'])){
                 foreach ($info['upazila_market_size'] as $upzila_id=>$market_size){
@@ -159,6 +195,22 @@ class ResearchSalesTeamController extends RootController
             $row['sowing_periods']=',';
             if(isset($info['sowing_periods'])){
                 $row['sowing_periods']=','.implode(',',$info['sowing_periods']).',';
+            }
+
+            $row['competitor_market_size']=',';
+            if(isset($info['competitor_market_size'])){
+                foreach ($info['competitor_market_size'] as $variety_id=>$market_size){
+                    $row['competitor_market_size'].=($variety_id.'_'.($market_size>0?$market_size:'0').',');
+                    $row['market_size_competitor']+=($market_size>0?(+$market_size):0);
+                }
+            }
+            $row['market_size_arm']=$row['market_size_total']-$row['market_size_competitor'];
+
+            $row['competitor_sales_reason']=',,,';
+            if(isset($info['competitor_sales_reason'])){
+                foreach ($info['competitor_sales_reason'] as $variety_id=>$reason){
+                    $row['competitor_sales_reason'].=($variety_id.'_'.trim($reason,',').',,,');
+                }
             }
 
             //final list for add edit
