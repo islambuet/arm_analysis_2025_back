@@ -61,7 +61,26 @@ class ResearchSalesTeamController extends RootController
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
         }
     }
-
+    public function getItems(Request $request,$analysisYearId): JsonResponse
+    {
+        if ($this->permissions->action_0 == 1) {
+            $results=DB::table(TABLE_ANALYSIS_DATA.' as ad')
+                ->select(DB::raw('COUNT(type_id) as total_type_entered'))
+                ->addSelect('district_id')
+                ->groupBy('ad.district_id')
+                ->where('ad.analysis_year_id','=',$analysisYearId)
+                ->get();
+            $response = [];
+            $response['error'] ='';
+            $response['items']=[];
+            foreach ($results as $result){
+                $response['items'][$result->district_id]=$result;
+            }
+            return response()->json($response);
+        } else {
+            return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
+        }
+    }
     public function getItem(Request $request,$analysisYearId, $itemId): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
