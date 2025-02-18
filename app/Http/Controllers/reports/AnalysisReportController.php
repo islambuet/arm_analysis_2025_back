@@ -96,44 +96,34 @@ class AnalysisReportController extends RootController
     public function getItems(Request $request): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
+            $response = [];
+            $response['error'] ='';
             $options = $request->input('options');
-            $perPage = $request->input('perPage', -1);
-            //$query=DB::table(TABLE_CROP_TYPES);
-            $query=DB::table(TABLE_VARIETIES.' as varieties');
-            $query->select('varieties.*');
-            $query->join(TABLE_CROP_TYPES.' as crop_types', 'crop_types.id', '=', 'varieties.crop_type_id');
-            $query->addSelect('crop_types.name as crop_type_name');
-            if($options['crop_type_id']>0){
-                $query->where('crop_types.id', $options['crop_type_id']);
-            }
+            $query=DB::table(TABLE_ANALYSIS_DATA.' as ad');
+            $query->select('ad.*');
+            $query->join(TABLE_CROP_TYPES.' as crop_types', 'crop_types.id', '=', 'ad.type_id');
             $query->join(TABLE_CROPS.' as crops', 'crops.id', '=', 'crop_types.crop_id');
-            $query->addSelect('crops.name as crop_name');
+            $query->addSelect('crops.id as crop_id');
             if($options['crop_id']>0){
-                $query->where('crops.id', $options['crop_id']);
-            }
-            $query->leftJoin(TABLE_PRINCIPALS.' as principals', 'principals.id', '=', 'varieties.principal_id');
-            $query->addSelect('principals.name as principal_name');
-            if($options['principal_id']>0){
-                $query->where('principals.id', $options['principal_id']);
-            }
-            $query->leftJoin(TABLE_COMPETITORS.' as competitors', 'competitors.id', '=', 'varieties.competitor_id');
-            $query->addSelect('competitors.name as competitor_name');
-            if($options['competitor_id']>0){
-                $query->where('competitors.id', $options['competitor_id']);
-            }
-            $query->orderBy('crops.ordering', 'ASC');
-            $query->orderBy('crop_types.ordering', 'ASC');
-            $query->orderBy('varieties.ordering', 'ASC');
-            $query->orderBy('varieties.id', 'DESC');
-            $query->where('varieties.status', '!=', SYSTEM_STATUS_DELETE);//
-            if ($perPage == -1) {
-                $perPage = $query->count();
-                if($perPage<1){
-                    $perPage=50;
+                $query->where('crop_types.crop_id','=',$options['crop_id']);
+                if($options['crop_type_id']>0){
+                    $query->where('ad.type_id','=',$options['crop_type_id']);
                 }
             }
-            $results = $query->paginate($perPage)->toArray();
-            return response()->json(['error'=>'','items'=>$results,'inputs'=>$request->all()]);
+            if($options['district_id']>0){
+                $query->where('ad.district_id','=',$options['district_id']);
+//                if($options['upazila_id']>0){
+//                    $query->where('ad.upazila_id','=',$options['upazila_id']);
+//                }
+            }
+            $query->orderBy('crops.ordering', 'ASC');
+            $query->orderBy('crops.id', 'ASC');
+            $query->orderBy('crop_types.ordering', 'ASC');
+            $query->orderBy('crop_types.id', 'ASC');
+            $query->orderBy('ad.district_id', 'ASC');
+            $response['items']=$query->get();
+            //$response['items']=$options;
+            return response()->json($response);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
         }
