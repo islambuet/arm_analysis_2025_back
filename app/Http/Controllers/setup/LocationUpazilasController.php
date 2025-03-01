@@ -35,6 +35,21 @@ class LocationUpazilasController extends RootController
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
+            $response['location_parts'] = DB::table(TABLE_LOCATION_PARTS)
+                ->select('id', 'name')
+                ->orderBy('ordering', 'ASC')
+                ->where('status', SYSTEM_STATUS_ACTIVE)
+                ->get();
+            $response['location_areas'] = DB::table(TABLE_LOCATION_AREAS)
+                ->select('id', 'name','part_id')
+                ->orderBy('ordering', 'ASC')
+                ->where('status', SYSTEM_STATUS_ACTIVE)
+                ->get();
+            $response['location_territories'] = DB::table(TABLE_LOCATION_TERRITORIES)
+                ->select('id', 'name','area_id')
+                ->orderBy('ordering', 'ASC')
+                ->where('status', SYSTEM_STATUS_ACTIVE)
+                ->get();
             return response()->json($response);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
@@ -50,6 +65,12 @@ class LocationUpazilasController extends RootController
             $query->select('upazilas.*');
             $query->join(TABLE_LOCATION_DISTRICTS.' as districts', 'districts.id', '=', 'upazilas.district_id');
             $query->addSelect('districts.name as district_name');
+            $query->leftJoin(TABLE_LOCATION_TERRITORIES.' as territories', 'territories.id', '=', 'upazilas.territory_id');
+            $query->addSelect('territories.name as territory_name');
+            $query->leftJoin(TABLE_LOCATION_AREAS.' as areas', 'areas.id', '=', 'territories.area_id');
+            $query->addSelect('areas.name as area_name','areas.id as area_id');
+            $query->leftJoin(TABLE_LOCATION_PARTS.' as parts', 'parts.id', '=', 'areas.part_id');
+            $query->addSelect('parts.name as part_name','parts.id as part_id');
             $query->orderBy('upazilas.id', 'DESC');
             $query->where('upazilas.status', '!=', SYSTEM_STATUS_DELETE);//
             if ($perPage == -1) {
@@ -72,6 +93,13 @@ class LocationUpazilasController extends RootController
             $query->select('upazilas.*');
             $query->join(TABLE_LOCATION_DISTRICTS.' as districts', 'districts.id', '=', 'upazilas.district_id');
             $query->addSelect('districts.name as district_name');
+            $query->leftJoin(TABLE_LOCATION_TERRITORIES.' as territories', 'territories.id', '=', 'upazilas.territory_id');
+            $query->addSelect('territories.name as territory_name');
+            $query->leftJoin(TABLE_LOCATION_AREAS.' as areas', 'areas.id', '=', 'territories.area_id');
+            $query->addSelect('areas.name as area_name','areas.id as area_id');
+            $query->leftJoin(TABLE_LOCATION_PARTS.' as parts', 'parts.id', '=', 'areas.part_id');
+            $query->addSelect('parts.name as part_name','parts.id as part_id');
+
             $query->where('upazilas.id','=',$itemId);
             $result = $query->first();
             if (!$result) {
@@ -102,6 +130,7 @@ class LocationUpazilasController extends RootController
         $validation_rule = [];
         $validation_rule['name'] = ['required'];
         $validation_rule['district_id'] = ['required','numeric'];
+        $validation_rule['territory_id'] = ['nullable','numeric'];
         $validation_rule['ordering']=['numeric'];
         $validation_rule['status'] = [Rule::in([SYSTEM_STATUS_ACTIVE, SYSTEM_STATUS_INACTIVE])];
 
