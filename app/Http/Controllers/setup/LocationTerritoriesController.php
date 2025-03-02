@@ -86,11 +86,23 @@ class LocationTerritoriesController extends RootController
             $query->join(TABLE_LOCATION_PARTS.' as parts', 'parts.id', '=', 'areas.part_id');
             $query->addSelect('parts.name as part_name','parts.id as part_id');
             $query->where('territories.id','=',$itemId);
-            $result = $query->first();
-            if (!$result) {
+            $item = $query->first();
+            if (!$item) {
                 return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
             }
-            return response()->json(['error'=>'','item'=>$result]);
+            else{
+                $query=DB::table(TABLE_LOCATION_UPAZILAS.' as upazilas');
+                $query->select('upazilas.*');
+                $query->where('upazilas.territory_id', '=', $itemId);
+                $query->where('upazilas.status', '!=', SYSTEM_STATUS_DELETE);
+                $results = $query->get();
+                $item->upazilas=[];
+                foreach ($results as $result){
+                    $item->upazilas[]=$result->name;
+                }
+                return response()->json(['error'=>'','item'=>$item]);
+            }
+
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => $this->permissions]);
         }
