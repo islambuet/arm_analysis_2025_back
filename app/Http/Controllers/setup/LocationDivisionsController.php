@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 
-class LocationDistrictsController extends RootController
+class LocationDivisionsController extends RootController
 {
-    public $api_url = 'setup/location_districts';
+    public $api_url = 'setup/location_divisions';
     public $permissions;
 
     public function __construct()
@@ -22,34 +22,23 @@ class LocationDistrictsController extends RootController
         parent::__construct();
         $this->permissions = TaskHelper::getPermissions($this->api_url, $this->user);
     }
+
     public function initialize(): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
-            $response = [];
-            $response['error'] ='';
-            $response['permissions']=$this->permissions;
-            $response['hidden_columns']=TaskHelper::getHiddenColumns($this->api_url,$this->user);
-            $response['location_divisions'] = DB::table(TABLE_LOCATION_DIVISIONS)
-                ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
-                ->where('status', SYSTEM_STATUS_ACTIVE)
-                ->get();
-            return response()->json($response);
+            return response()->json(['error'=>'','permissions'=>$this->permissions,'hidden_columns'=>TaskHelper::getHiddenColumns($this->api_url,$this->user)]);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
         }
     }
+
     public function getItems(Request $request): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
             $perPage = $request->input('perPage', 50);
-            //$query=DB::table(TABLE_CROP_TYPES2);
-            $query=DB::table(TABLE_LOCATION_DISTRICTS.' as districts');
-            $query->select('districts.*');
-            $query->join(TABLE_LOCATION_DIVISIONS.' as divisions', 'divisions.id', '=', 'districts.division_id');
-            $query->addSelect('divisions.name as division_name');
-            $query->orderBy('districts.id', 'DESC');
-            $query->where('districts.status', '!=', SYSTEM_STATUS_DELETE);//
+            $query=DB::table(TABLE_LOCATION_DIVISIONS);
+            $query->orderBy('id', 'DESC');
+            $query->where('status', '!=', SYSTEM_STATUS_DELETE);//
             if ($perPage == -1) {
                 $perPage = $query->count();
                 if($perPage<1){
@@ -66,13 +55,7 @@ class LocationDistrictsController extends RootController
     public function getItem(Request $request, $itemId): JsonResponse
     {
         if ($this->permissions->action_0 == 1) {
-            $query=DB::table(TABLE_LOCATION_DISTRICTS.' as districts');
-            $query->select('districts.*');
-            $query->join(TABLE_LOCATION_DIVISIONS.' as divisions', 'divisions.id', '=', 'districts.division_id');
-            $query->addSelect('divisions.name as division_name');
-            $query->where('districts.id','=',$itemId);
-
-            $result = $query->first();
+            $result = DB::table(TABLE_LOCATION_DIVISIONS)->find($itemId);
             if (!$result) {
                 return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
             }
@@ -81,6 +64,7 @@ class LocationDistrictsController extends RootController
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => $this->permissions]);
         }
     }
+
     public function saveItem(Request $request): JsonResponse
     {
         $itemId = $request->input('id', 0);
@@ -99,7 +83,6 @@ class LocationDistrictsController extends RootController
         //Input validation start
         $validation_rule = [];
         $validation_rule['name'] = ['required'];
-        $validation_rule['division_id'] = ['required','numeric'];
         $validation_rule['ordering']=['numeric'];
         $validation_rule['status'] = [Rule::in([SYSTEM_STATUS_ACTIVE, SYSTEM_STATUS_INACTIVE])];
 
@@ -110,23 +93,25 @@ class LocationDistrictsController extends RootController
 
         //edit change checking
         if ($itemId > 0) {
-            $result = DB::table(TABLE_LOCATION_DISTRICTS)->select(array_keys($validation_rule))->find($itemId);
+            $result = DB::table(TABLE_LOCATION_DIVISIONS)->select(array_keys($validation_rule))->find($itemId);
             if (!$result) {
                 return response()->json(['error' => 'ITEM_NOT_FOUND', 'messages' => __('Invalid Id ' . $itemId)]);
             }
             $itemOld = (array)$result;
             foreach ($itemOld as $key => $oldValue) {
                 if (array_key_exists($key, $itemNew)) {
-
+                    if(in_array($key,['expected_delivery_at','expected_sowing_at','expected_reporting_at']))
+                    {
+                        if($oldValue){
+                            $oldValue=substr($oldValue,0,10);//getting only date part
+                        }
+                    }
                     if ($oldValue == $itemNew[$key]) {
                         //unchanged so remove from both
                         unset($itemNew[$key]);
                         unset($itemOld[$key]);
                         unset($validation_rule[$key]);
                     }
-//                    else if($key=='crop_id'){
-//                        return response()->json(['error' => 'VALIDATION_FAILED', 'messages' =>'Cannot Change Crop']);
-//                    }
                 } else {
                     //will not happen if it comes form vue. removing rule and key for not change
                     unset($validation_rule[$key]);
@@ -139,26 +124,25 @@ class LocationDistrictsController extends RootController
             return response()->json(['error' => 'VALIDATION_FAILED', 'messages' => 'Nothing was Changed']);
         }
         $this->validateInputValues($itemNew, $validation_rule);
-        //TODO validate crop_id
         //Input validation ends
         DB::beginTransaction();
         try {
             $time = Carbon::now();
             $dataHistory = [];
-            $dataHistory['table_name'] = TABLE_LOCATION_DISTRICTS;
+            $dataHistory['table_name'] = TABLE_LOCATION_DIVISIONS;
             $dataHistory['controller'] = (new \ReflectionClass(__CLASS__))->getShortName();
             $dataHistory['method'] = __FUNCTION__;
             $newId = $itemId;
             if ($itemId > 0) {
                 $itemNew['updated_by'] = $this->user->id;
                 $itemNew['updated_at'] = $time;
-                DB::table(TABLE_LOCATION_DISTRICTS)->where('id', $itemId)->update($itemNew);
+                DB::table(TABLE_LOCATION_DIVISIONS)->where('id', $itemId)->update($itemNew);
                 $dataHistory['table_id'] = $itemId;
                 $dataHistory['action'] = DB_ACTION_EDIT;
             } else {
                 $itemNew['created_by'] = $this->user->id;
                 $itemNew['created_at'] = $time;
-                $newId = DB::table(TABLE_LOCATION_DISTRICTS)->insertGetId($itemNew);
+                $newId = DB::table(TABLE_LOCATION_DIVISIONS)->insertGetId($itemNew);
                 $dataHistory['table_id'] = $newId;
                 $dataHistory['action'] = DB_ACTION_ADD;
             }
