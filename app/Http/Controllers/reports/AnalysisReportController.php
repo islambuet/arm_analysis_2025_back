@@ -81,7 +81,13 @@ class AnalysisReportController extends RootController
                 ->orderBy('ordering', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
-
+            $response['varieties']=DB::table(TABLE_VARIETIES.' as varieties')
+                ->select('varieties.*')
+                ->leftJoin(TABLE_COMPETITORS.' as competitors', 'competitors.id', '=', 'varieties.competitor_id')
+                ->addSelect('competitors.name as competitor_name')
+                ->orderBy('varieties.id', 'DESC')
+                ->where('varieties.status', '!=', SYSTEM_STATUS_DELETE)
+                ->get();
             $response['principals'] = DB::table(TABLE_PRINCIPALS)
                 ->select('id', 'name')
                 ->orderBy('ordering', 'ASC')
@@ -177,14 +183,60 @@ class AnalysisReportController extends RootController
                 $query->whereIn('ad.district_id',$district_ids);
             }
             $results=$query->get();
+            $items=[];
+            foreach ($results as $result) {
+                if(sizeof($upazila_ids)>0){
+                    $result->market_size_total=0;
+                    $result->market_size_arm=0;
+                    $result->market_size_competitor=0;
+                }
+                $upazila_info = [];
+                if (strlen($result->upazila_market_size) > 1) {
+                    $temp = explode(",", $result->upazila_market_size);
+                    foreach ($temp as $t) {
+                        if (str_contains($t, '_')) {
+                            $upazila_id=substr($t, 0, strpos($t, "_"));
+                            $market_size=substr($t, strpos($t, "_") + 1);
+                            if(sizeof($upazila_ids)>0){
+                                if(in_array($upazila_id,$upazila_ids)){
+                                    $upazila_info[$upazila_id]=['upazila_market_size'=>$market_size,'unions'=>[]];
+                                    $result->market_size_total+=(+$market_size);
+                                }
+                            }
+                            else{
+                                $upazila_info[$upazila_id]=['upazila_market_size'=>$market_size,'unions'=>[]];
+                            }
 
-            if(sizeof($upazila_ids)>0){
-                $items=[];
-                $response['items']=$items;
+                        }
+                    }
+                }
+                $result->upazila_info = $upazila_info;
+
+                unset($result->upazila_market_size);
+
+                $competitor_info=[];
+                if(strlen($result->competitor_market_size)>1){
+                    $temp=explode(",",$result->competitor_market_size);
+                    foreach ($temp as $t){
+                        if(str_contains($t,'_')){
+                            $competitor_info[substr($t,0,strpos($t,"_"))]=['competitor_variety_market_size'=>substr($t,strpos($t,"_")+1),'competitor_sales_reason'=>''];
+                        }
+                    }
+                }
+                if(strlen($result->competitor_sales_reason)>3){
+                    $temp=explode(",,,",$result->competitor_sales_reason);
+                    foreach ($temp as $t){
+                        if(str_contains($t,'_')){
+                            $competitor_info[substr($t,0,strpos($t,"_"))]['competitor_variety_sales_reason']=substr($t,strpos($t,"_")+1);
+                        }
+                    }
+                }
+                unset($result->competitor_market_size);
+                unset($result->competitor_sales_reason);
+                $result->competitor_info = $competitor_info;
+                $items[]=$result;
             }
-            else{
-                $response['items']=$results;
-            }
+            $response['items']=$items;
             return response()->json($response);
         } else {
             return response()->json(['error' => 'ACCESS_DENIED', 'messages' => __('You do not have access on this page')]);
