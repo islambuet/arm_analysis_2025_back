@@ -172,6 +172,7 @@ class AnalysisReportController extends RootController
             $query=DB::table(TABLE_ANALYSIS_DATA.' as ad');
             $query->select('ad.*');
             $query->join(TABLE_CROP_TYPES.' as crop_types', 'crop_types.id', '=', 'ad.type_id');
+            $query->where('crop_types.status', SYSTEM_STATUS_ACTIVE);
             $query->addSelect('crop_types.crop_id');
             if($options['crop_id']>0){
                 $query->where('crop_types.crop_id','=',$options['crop_id']);
