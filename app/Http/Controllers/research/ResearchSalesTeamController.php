@@ -112,10 +112,14 @@ class ResearchSalesTeamController extends RootController
                 ->join(TABLE_COMPETITORS.' as competitors', 'competitors.id', '=', 'varieties.competitor_id')
                 ->addSelect('competitors.name as competitor_name')
                 ->where('varieties.whose','=','Competitor')
+                ->orderBy('competitors.name', 'ASC')
+                ->orderBy('varieties.name', 'ASC')
                 ->get();
             $response['varieties_competitor']=[];
+            $response['varieties_competitor_ordered']=[];
             foreach ($results as $result){
                 $response['varieties_competitor'][$result->crop_type_id][$result->id]=$result;
+                $response['varieties_competitor_ordered'][$result->crop_type_id][]=$result;
             }
 
             $results=DB::table(TABLE_ANALYSIS_DATA.' as ad')
@@ -211,6 +215,7 @@ class ResearchSalesTeamController extends RootController
             if(isset($info['union_ids_running'])){
                 $row['union_ids_running']=','.implode(',',$info['union_ids_running']).',';
             }
+            $row['price_approximate']=$info['price_approximate'];
             $row['sowing_periods']=',';
             if(isset($info['sowing_periods'])){
                 $row['sowing_periods']=','.implode(',',$info['sowing_periods']).',';
