@@ -52,7 +52,7 @@ class ResearchSalesTeamController extends RootController
                 ->get();
             $response['location_districts'] = DB::table(TABLE_LOCATION_DISTRICTS)
                 ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             return response()->json($response);
@@ -88,19 +88,21 @@ class ResearchSalesTeamController extends RootController
             $response['error'] ='';
             $results= DB::table(TABLE_LOCATION_UPAZILAS)
                 ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('district_id', $itemId)
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_upazilas'] =[];
+            $response['location_upazilas_ordered'] =[];
             foreach ($results as $result){
                 $response['location_upazilas'][$result->id]=$result;
+                $response['location_upazilas_ordered'][]=$result;
             }
             $results=DB::table(TABLE_LOCATION_UNIONS.' as unions')
                 ->select('unions.*')
                 ->join(TABLE_LOCATION_UPAZILAS.' as upazilas', 'upazilas.id', '=', 'unions.upazila_id')
                 ->where('upazilas.district_id', $itemId)
-                ->orderBy('unions.ordering', 'ASC')
+                ->orderBy('unions.name', 'ASC')
                 ->where('unions.status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_unions']=[];
