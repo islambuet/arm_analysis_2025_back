@@ -37,38 +37,38 @@ class AnalysisReportController extends RootController
                 ->get();
             $response['location_parts'] = DB::table(TABLE_LOCATION_PARTS)
                 ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_areas'] = DB::table(TABLE_LOCATION_AREAS)
                 ->select('id', 'name','part_id')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_territories'] = DB::table(TABLE_LOCATION_TERRITORIES)
                 ->select('id', 'name','area_id')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_divisions'] = DB::table(TABLE_LOCATION_DIVISIONS)
                 ->select('id', 'name')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_districts'] = DB::table(TABLE_LOCATION_DISTRICTS)
                 ->select('id', 'name', 'division_id')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
 
             $response['location_upazilas'] = DB::table(TABLE_LOCATION_UPAZILAS)
                 ->select('id', 'name','district_id')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['location_unions'] = DB::table(TABLE_LOCATION_UNIONS)
                 ->select('id', 'name','upazila_id')
-                ->orderBy('ordering', 'ASC')
+                ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
             $response['crops'] = DB::table(TABLE_CROPS)
