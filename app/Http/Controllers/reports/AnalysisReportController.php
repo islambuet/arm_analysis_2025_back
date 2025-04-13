@@ -62,7 +62,7 @@ class AnalysisReportController extends RootController
                 ->get();
 
             $response['location_upazilas'] = DB::table(TABLE_LOCATION_UPAZILAS)
-                ->select('id', 'name','district_id')
+                ->select('id', 'name','district_id','territory_id')
                 ->orderBy('name', 'ASC')
                 ->where('status', SYSTEM_STATUS_ACTIVE)
                 ->get();
@@ -132,7 +132,8 @@ class AnalysisReportController extends RootController
                 }
             }
             else if($options['territory_id']>0){
-                $upazila_ids[0]=0;
+                //$upazila_ids[0]=-1;//without others
+                $upazila_ids[0]=0; //with others upazila
                 $district_ids[0]=0;
                 $results=DB::table(TABLE_LOCATION_UPAZILAS)->select('district_id','id')->where('territory_id',$options['territory_id'])->get();
                 if($results){

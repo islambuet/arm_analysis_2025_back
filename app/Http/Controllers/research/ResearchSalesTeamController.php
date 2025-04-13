@@ -114,6 +114,7 @@ class ResearchSalesTeamController extends RootController
                 ->join(TABLE_COMPETITORS.' as competitors', 'competitors.id', '=', 'varieties.competitor_id')
                 ->addSelect('competitors.name as competitor_name')
                 ->where('varieties.whose','=','Competitor')
+                ->where('varieties.status', SYSTEM_STATUS_ACTIVE)
                 ->orderBy('competitors.name', 'ASC')
                 ->orderBy('varieties.name', 'ASC')
                 ->get();
