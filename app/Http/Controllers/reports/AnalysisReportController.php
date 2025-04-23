@@ -112,39 +112,67 @@ class AnalysisReportController extends RootController
             $response['error'] ='';
             $options = $request->input('options');
             $district_ids=[];
+            $district_ids[0]=0;
             $upazila_ids=[];
             if($options['upazila_id']>0){
-                $upazila_ids[]=$options['upazila_id'];
-                $district_ids[]=0;
+                $upazila_ids[$options['upazila_id']]=$options['upazila_id'];
                 $result = DB::table(TABLE_LOCATION_UPAZILAS)->find($options['upazila_id']);
                 if ($result) {
-                    $district_ids[]=$result->district_id;
+                    $district_ids[$result->district_id]=$result->district_id;
                 }
             }
             else if($options['district_id']>0){
-                $district_ids[]=$options['district_id'];
+                $district_ids[$options['district_id']]=$options['district_id'];
             }
             else if($options['division_id']>0){
                 $results=DB::table(TABLE_LOCATION_DISTRICTS)->where('division_id',$options['division_id'])->get();
                 if($results){
                     foreach ($results as $result){
-                        $district_ids[]=$result->id;
+                        $district_ids[$result->id]=$result->id;
                     }
                 }
             }
-            else if($options['territory_id']>0){
-                //$upazila_ids[0]=-1;//without others
-                $upazila_ids[0]=0; //with others upazila
-                $district_ids[0]=0;
+            else{
+                $results=DB::table(TABLE_LOCATION_DISTRICTS)->get();
+                if($results){
+                    foreach ($results as $result){
+                        $district_ids[$result->id]=$result->id;
+                    }
+                }
+            }
+            if($options['territory_id']>0){
+                $territory_upazila_ids=[];
+                $territory_upazila_ids[0]=0;
+                $territory_district_ids=[];
+                $territory_district_ids[0]=0;
+
                 $results=DB::table(TABLE_LOCATION_UPAZILAS)->select('district_id','id')->where('territory_id',$options['territory_id'])->get();
                 if($results){
                     foreach ($results as $result){
-                        $district_ids[$result->district_id]=$result->district_id;
-                        $upazila_ids[$result->id]=$result->id;
+                        $territory_district_ids[$result->district_id]=$result->district_id;
+                        $territory_upazila_ids[$result->id]=$result->id;
+                    }
+                    //intersect
+                    if($options['upazila_id']>0){
+                        if(!in_array($options['upazila_id'],$territory_upazila_ids)){
+                            unset($upazila_ids[$options['upazila_id']]);
+                        }
+                    }
+                    else{
+                        $upazila_ids=$territory_upazila_ids;
                     }
                 }
+                foreach ($district_ids as $district_id){
+                    if(!in_array($district_id,$territory_district_ids)){
+                        unset($district_ids[$district_id]);
+                    }
+                }
+
             }
             else if($options['area_id']>0){
+                $area_district_ids=[];
+                $area_district_ids[0]=0;
+
                 $query=DB::table(TABLE_LOCATION_UPAZILAS.' as upazilas');
                 $query->select('upazilas.district_id');
                 $query->distinct();
@@ -153,21 +181,34 @@ class AnalysisReportController extends RootController
                 $results=$query->get();
                 if($results){
                     foreach ($results as $result){
-                        $district_ids[]=$result->district_id;
+                        $area_district_ids[$result->district_id]=$result->district_id;
+                    }
+                }
+                //intersect
+                foreach ($district_ids as $district_id){
+                    if(!in_array($district_id,$area_district_ids)){
+                        unset($district_ids[$district_id]);
                     }
                 }
             }
             else if($options['part_id']>0){
-                $query=DB::table(TABLE_LOCATION_UPAZILAS.' as upazilas');
+                $part_district_ids=[];
+                $part_district_ids[0]=0;
+                $query = DB::table(TABLE_LOCATION_UPAZILAS . ' as upazilas');
                 $query->select('upazilas.district_id');
                 $query->distinct();
-                $query->leftJoin(TABLE_LOCATION_TERRITORIES.' as territories', 'territories.id', '=', 'upazilas.territory_id');
-                $query->leftJoin(TABLE_LOCATION_AREAS.' as areas', 'areas.id', '=', 'territories.area_id');
-                $query->where('areas.part_id','=',$options['part_id']);
-                $results=$query->get();
-                if($results){
-                    foreach ($results as $result){
-                        $district_ids[]=$result->district_id;
+                $query->leftJoin(TABLE_LOCATION_TERRITORIES . ' as territories', 'territories.id', '=', 'upazilas.territory_id');
+                $query->leftJoin(TABLE_LOCATION_AREAS . ' as areas', 'areas.id', '=', 'territories.area_id');
+                $query->where('areas.part_id', '=', $options['part_id']);
+                $results = $query->get();
+                if ($results) {
+                    foreach ($results as $result) {
+                        $part_district_ids[$result->district_id] = $result->district_id;
+                    }
+                }
+                foreach ($district_ids as $district_id){
+                    if(!in_array($district_id,$part_district_ids)){
+                        unset($district_ids[$district_id]);
                     }
                 }
             }
@@ -182,9 +223,7 @@ class AnalysisReportController extends RootController
                     $query->where('ad.type_id','=',$options['crop_type_id']);
                 }
             }
-            if(sizeof($district_ids)>0){
-                $query->whereIn('ad.district_id',$district_ids);
-            }
+            $query->whereIn('ad.district_id',$district_ids);//minimum [0]=0
             $results=$query->get();
             $items=[];
             foreach ($results as $result) {
