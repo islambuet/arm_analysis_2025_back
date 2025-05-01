@@ -35,9 +35,9 @@
         {
             return self::$config[SYSTEM_CONFIGURATIONS_MOBILE_SMS_API_TOKEN] ?? '';
         }
-        public static function getCurrentAnalysisId():float
+        public static function getCurrentFiscalYearStartingMonth():float
         {
-            return isset(self::$config[SYSTEM_CONFIGURATIONS_CURRENT_ANALYSIS_ID])?(float)self::$config[SYSTEM_CONFIGURATIONS_CURRENT_ANALYSIS_ID]:2;
+            return isset(self::$config[SYSTEM_CONFIGURATIONS_FISCAL_YEAR_STARTING_MONTH])?(float)self::$config[SYSTEM_CONFIGURATIONS_FISCAL_YEAR_STARTING_MONTH]:6;
         }
 
     }
