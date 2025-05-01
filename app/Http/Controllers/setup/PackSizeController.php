@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 class PackSizeController extends RootController
 {
-    public $api_url = 'setup/pa';
+    public $api_url = 'setup/pack_size';
     public $permissions;
 
     public function __construct()
